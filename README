@@ -1,0 +1,18 @@
+ABOUT
+
+Riverfish is a library for transaction-safe operations over a sets of ordered integer non-unique keyed data
+with restricted and expected key range and restricted operations.  It can be backed by any memcached-protocol
+key/value store that supports a certain base set of operations correctly.
+
+STATUS
+
+Riverfish is in pre-release and is not ready for use.
+
+DEPENDENCIES
+
+bzr+ssh://bazaar.launchpad.net/%7Eestein/python-memcached/exceptional/
+http://pypi.python.org/pypi/msgpack-python/
+
+AUTHOR
+
+Riverfish is written by Eric Stein <toba@des.truct.org>.
