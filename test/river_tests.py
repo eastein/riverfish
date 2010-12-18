@@ -28,3 +28,14 @@ class RiverfishTests(unittest.TestCase) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		findriver = riverfish.River(self.client, self.rivername)
 		self.assertEquals(findriver.count, 0, "should rediscover with size 0")
+
+	def test_add(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		river.add(350000, {'KEY' : 350000, 'HI' : 'THERE'})
+
+	def test_get(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		k = 350000
+		d = {'KEY' : k, 'HI' : 'THERE'}
+		river.add(k, d)
+		self.assertEquals([d], river.get(k))
