@@ -6,9 +6,13 @@ import unittest
 # TODO include an in-process memcached daemon to avoid dealing with issues relating to clobbering existing memcached instances
 
 class RiverfishTests(unittest.TestCase) :
-	def setUp(self) :
+	def _alphaShuffle(self) :
 		name = list('abcdefghijklmnopqrstuvwxyz')
-		random.shuffle(name)
+		random.shuffle(name)		
+		return name
+
+	def setUp(self) :
+		name = self._alphaShuffle()
 		self.rivername = reduce(lambda a,b: a+b, name)
 		self.client = memcache_exceptional.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
 
@@ -62,3 +66,18 @@ class RiverfishTests(unittest.TestCase) :
 		river.add(3, 'test1')
 		river.add(riverfish.DEFAULT_INDEX_LEVELS[0] + 3, 'test2')
 		self._assertIterEquals(river, [(3, 'test1'), (riverfish.DEFAULT_INDEX_LEVELS[0]+3, 'test2')])
+
+	def test_iteration_two_equal(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		river.add(3, 'test1')
+		river.add(3, 'test2')
+		self._assertIterEquals(river, [(3, 'test1'), (3, 'test2')])
+
+	def test_random_sequenced_insert_ordered_iteration(self) :
+		n_items = 100
+		n_range = riverfish.DEFAULT_INDEX_LEVELS[0]*10
+		keys = []
+		datas = []
+		for i in xrange(n_items) :
+			keys.append(random.randint(0, n_range)
+			datas.append(self._alphaShuffle)
