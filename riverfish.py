@@ -12,6 +12,9 @@
 * maybe move away from msgpack, it's not great for list/tuple differences
 * write a decorator that can work with either one-off or generator style functions and does locking on the client resource
 ** perhaps force cas flush at the start of all operations?
+* validate name as fitting a regex (for rivers)
+* unicode keys for StringKeyedRiver?
+* check the correct exceptions are raised for every memcached false response
 """
 
 import uuid
@@ -33,6 +36,9 @@ class SafelyFailedException(RiverfishException) :
 
 class RiverAlreadyExistsException(SafelyFailedException, NoopException) :
 	"""River already existed.  Could not create."""
+
+class RiverKeyAlreadyExistsException(SafelyFailedException, NoopException) :
+	"""River key already existed.  Could not create."""
 
 class RiverDoesNotExistException(SafelyFailedException, NoopException) :
 	"""River does not exist."""
@@ -70,15 +76,14 @@ class River(object) :
 	def kt_stringcrc(cls, k) :
 		return crc32(k) & 0xffffffff
 
-
 	@classmethod
 	def kt_allzero(cls, k) :
 		return 0
 
-	# TODO validate name as fitting a regex
-	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT) :
+	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT, unique=False) :
 		self.client = client
 		self.name = name
+		self.unique = unique
 		self.rnkey = 't:%s:rn' % self.name
 		
 		if create :
@@ -88,7 +93,8 @@ class River(object) :
 				'IND' : self.ind,
 				'FIN' : None,
 				'LIN' : None,
-				'KT' : key_transform
+				'KTR' : key_transform,
+				'UNQ' : self.unique
 			}
 			if not self.client.add(self.rnkey, msgpack.packs(data)) :
 				raise RiverAlreadyExistsException("river %s already exists" % self.name)
@@ -97,7 +103,8 @@ class River(object) :
 			if not data :
 				raise RiverDoesNotExistException("river %s does not exist" % self.name)
 			self.ind = data['IND']
-			key_transform = data['KT']
+			self.unique = data['UNQ']
+			key_transform = data['KTR']
 
 		if key_transform :
 			try :
@@ -180,6 +187,17 @@ class River(object) :
 		list_node = self._getsIndexNode(key, indl)
 		if list_node :
 			meta_list = list(list_node.get(key, []))
+			if self.unique :
+				# if the table uses unique, we must check that we don't duplicate the key.
+				if self.key_transform :
+					for m in meta_list :
+						# we are using a key transform; compare the original keys until we find a match before continuing.
+						if metadata['_KEY'] == m['_KEY'] :
+							raise RiverKeyAlreadyExistsException("Key %s exists and the river has unique=True." % str(metadata['_KEY']))
+				else :
+					if meta_list :
+						# this key already has a non-empty list in this space. fail!
+						raise RiverKeyAlreadyExistsException("Key %d exists and the river has unique=True." % key)
 			if metadata in meta_list :
 				# retries won't know if it's in there yet. Just succeed if the exact metadata exists already.
 				return True
@@ -188,8 +206,6 @@ class River(object) :
 			list_node[key] = meta_list
 			return self._cupack(likey, list_node)
 		else :
-			# TODO benchmark dict vs giant list... perhaps use a plain list here? Not sure.
-			# should I optimise for lookups or iteration?
 			return self._apack(likey, {key : [metadata]})
 
 	"""
@@ -261,8 +277,8 @@ class River(object) :
 		return Boat(self)
 
 class StringKeyedRiver(River) :
-	def __init__(self, client, name, create=False, ind=DefaultLevels.CRC_OPTIMIZED) :
-		River.__init__(self, client, name, create=create, ind=ind, key_transform='kt_stringcrc')
+	def __init__(self, client, name, create=False, ind=DefaultLevels.CRC_OPTIMIZED, unique=False) :
+		River.__init__(self, client, name, create=create, ind=ind, key_transform='kt_stringcrc', unique=unique)
 
 class Wave(River) :
 	def __init__(self, river, options=[]) :

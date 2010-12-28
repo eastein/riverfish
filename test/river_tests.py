@@ -145,3 +145,29 @@ class RiverfishTests(unittest.TestCase) :
 		river.add('a', {'KEY' : 'a', 'DATA' : 'should get this.'})
 		river.add('b', {'KEY' : 'b', 'DATA' : 'should not get this.'})
 		self.assertEquals(river.get('a'), [{'KEY' : 'a', 'DATA' : 'should get this.'}])
+
+	def test_addunique_numeric_fails(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, unique=True)
+		river.add(1, {'KEY' : 1, 'DATA' : 'test'})
+		try :
+			river.add(1, {'KEY' : 1, 'DATA' : 'test'})
+			self.fail("should not have succeeded adding another key.")
+		except riverfish.RiverKeyAlreadyExistsException :
+			pass
+
+	def test_addunique_string_fails(self) :
+		river = riverfish.StringKeyedRiver(self.client, self.rivername, create=True, unique=True)
+		river.add('a', {'KEY' : 'a', 'DATA' : 'test'})
+		try :
+			river.add('a', {'KEY' : 'a', 'DATA' : 'test'})
+			self.fail("should not have succeeded adding another key.")
+		except riverfish.RiverKeyAlreadyExistsException :
+			pass
+
+	def test_addunique_string_hashcollision_ok(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_allzero', unique=True)
+		river.add('a', {'KEY' : 'a', 'DATA' : 'test'})
+		river.add('b', {'KEY' : 'b', 'DATA' : 'test2'})
+		self.assertEquals(river.get('a'), [{'KEY' : 'a', 'DATA' : 'test'}])
+
+
