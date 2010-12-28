@@ -3,6 +3,7 @@
 * what happens if memcached temporarily fails at any point?
 * what happens if memcached permanently fails at some point?
 * sharing client? can this cause issues?
+* verify that the code works even with less levels, or document the limit
 * metadata currently can't have any lists in it (directly), they get turned into tuples...
 ** threadsafe for one client to be accessed from multiple threads?  The cache for cas is shared... NOT SAFE
 * keeping one client over the length of operations with a river object? this could be bad too..
@@ -43,13 +44,12 @@ class RiverDeletedException(SafelyFailedException) :
 class ContentionFailureException(SafelyFailedException, PartialFailureException) :
 	"""The operation failed partially due to contention."""
 
-# TODO verify that the code works even with less levels, or document the limit
-# do not modify this at runtime, it'll break things.
-DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000, 10000]
+class DefaultLevels :
+	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
 
 class River(object) :
 	# TODO validate name as fitting a regex
-	def __init__(self, client, name, create=False, key_transform=None, ind=DEFAULT_INDEX_LEVELS) :
+	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.SLOW_UPDATE_REAL_TIME) :
 		self.client = client
 		self.name = name
 		self.rnkey = 't:%s:rn' % self.name
