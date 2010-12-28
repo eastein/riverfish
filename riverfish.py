@@ -1,7 +1,5 @@
 """
 * what happens if all of the memcached nodes get restarted between gets() and cas()?  Does reconnect flush anything? Are cas tokens still valid?
-* what happens if memcached temporarily fails at any point?
-* what happens if memcached permanently fails at some point?
 * sharing client? can this cause issues?
 * verify that the code works even with less levels, or document the limit
 * metadata currently can't have any lists in it (directly), they get turned into tuples...
@@ -19,7 +17,6 @@
 import uuid
 import msgpack
 from binascii import crc32
-from hashlib import md5
 
 class RiverfishException(Exception) :
 	"""Base exception class for riverfish"""

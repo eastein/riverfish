@@ -8,7 +8,7 @@ import unittest
 ## no evictions in this daemon
 # tests that force memcached operations to sleep for random periods or freeze (perhaps allowing stepping from the test suite?)
 ## show that during various types of insert, the iteration continues to work at different stages
-## show that at no point would a failure in an insert result in corruption that failed iteration
+## show that at no point would a failure in an insert result in corruption that failed iteration or get on previously OK data
 ## show that concurrent inserts will not corrupt the db, even in the case of conflicts
 
 class RiverfishTests(unittest.TestCase) :
