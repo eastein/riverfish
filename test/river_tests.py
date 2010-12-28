@@ -26,7 +26,6 @@ class RiverfishTests(unittest.TestCase) :
 
 	def test_create(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
-		self.assertEquals(river.count, 0, "should initialize with size 0")
 
 	def test_create_twice_fails(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
@@ -39,7 +38,6 @@ class RiverfishTests(unittest.TestCase) :
 	def test_discover(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		findriver = riverfish.River(self.client, self.rivername)
-		self.assertEquals(findriver.count, 0, "should rediscover with size 0")
 
 	def test_add(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
@@ -51,6 +49,15 @@ class RiverfishTests(unittest.TestCase) :
 		d = {'KEY' : k, 'HI' : 'THERE'}
 		river.add(k, d)
 		self.assertEquals([d], river.get(k))
+
+	def test_get_two(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		k = 350000
+		d = {'KEY' : k, 'HI' : 'THERE'}
+		d2 = {'KEY' : k, 'HI' : 'WHERE'}
+		river.add(k, d)
+		river.add(k, d2)
+		self.assertEquals([d, d2], river.get(k))
 
 	def _assertIterEquals(self, riv, exp) :
 		ind = 0

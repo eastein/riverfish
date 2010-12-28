@@ -14,6 +14,8 @@
 
 import uuid
 import msgpack
+from binascii import crc32
+from hashlib import md5
 
 class RiverfishException(Exception) :
 	"""Base exception class for riverfish"""
@@ -46,7 +48,7 @@ DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000, 10000]
 
 class River(object) :
 	# TODO validate name as fitting a regex
-	def __init__(self, client, name, create=False) :
+	def __init__(self, client, name, create=False, key_transform=None) :
 		self.client = client
 		self.name = name
 		self.rnkey = 't:%s:rn' % self.name
@@ -58,7 +60,7 @@ class River(object) :
 				'IND' : self.ind,
 				'FIN' : None,
 				'LIN' : None,
-				'TOT' : 0
+				'KT' : key_transform
 			}
 			if not self.client.add(self.rnkey, msgpack.packs(data)) :
 				raise RiverAlreadyExistsException("river %s already exists" % self.name)
@@ -67,6 +69,9 @@ class River(object) :
 			if not data :
 				raise RiverDoesNotExistException("river %s does not exist" % self.name)
 			self.ind = data['IND']
+			key_transform = data['KT']
+
+	
 
 	def _unpack(self, v) :
 		"""
@@ -145,11 +150,6 @@ class River(object) :
 			# TODO benchmark dict vs giant list... perhaps use a plain list here? Not sure.
 			# should I optimise for lookups or iteration?
 			return self._apack(likey, {key : [metadata]})
-
-	@property
-	def count(self) :
-		# TODO how to make this count work correctly in cases of transaction failure during add.. it's not done 
-		return self._getRiverNode()['TOT']
 
 	"""
 	Add a fish to the river, given the fish's metadata.
