@@ -1,8 +1,12 @@
 ABOUT
 
-Riverfish is a library for transaction-safe operations over a sets of ordered integer non-unique keyed data
+Riverfish is a library for transactional memory-like operations over a sets of ordered integer non-unique keyed data
 with restricted and expected key range and restricted operations.  It can be backed by any memcached-protocol
-key/value store that supports a certain base set of operations correctly.
+key/value store that supports a certain base set of operations correctly:
+
+* get/set
+* gets/cas
+* add/delete
 
 STATUS
 
@@ -12,6 +16,10 @@ TESTING
 
 To run the test suite, you will need to have a memcached server running on localhost that you are OK with arbitrary
 operations being performed on.
+
+Suggested test run command:
+
+	nosetests -v test
 
 DEPENDENCIES
 
