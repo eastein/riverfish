@@ -2,10 +2,9 @@
 * what happens if all of the memcached nodes get restarted between gets() and cas()?  Does reconnect flush anything? Are cas tokens still valid?
 * what happens if memcached temporarily fails at any point?
 * what happens if memcached permanently fails at some point?
-** secondary store/queue for cleanup operations?
 * sharing client? can this cause issues?
 * metadata currently can't have any lists in it (directly), they get turned into tuples...
-** threadsafe for one client to be accessed from multiple threads?  The cache for cas is shared...
+** threadsafe for one client to be accessed from multiple threads?  The cache for cas is shared... NOT SAFE
 * keeping one client over the length of operations with a river object? this could be bad too..
 * if I am going to allow reindexing, river objects can't cache IND anymore.
 * transaction failure during index node creation can produce index node clutter if the transaction isn't retried until success

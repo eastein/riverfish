@@ -3,7 +3,13 @@ import random
 import riverfish
 import unittest
 
-# TODO include an in-process memcached daemon to avoid dealing with issues relating to clobbering existing memcached instances
+# TODO
+# include an in-process memcached daemon to avoid dealing with issues relating to clobbering existing memcached instances
+## no evictions in this daemon
+# tests that force memcached operations to sleep for random periods or freeze (perhaps allowing stepping from the test suite?)
+## show that during various types of insert, the iteration continues to work at different stages
+## show that at no point would a failure in an insert result in corruption that failed iteration
+## show that concurrent inserts will not corrupt the db, even in the case of conflicts
 
 class RiverfishTests(unittest.TestCase) :
 	def _alphaShuffle(self) :
@@ -13,7 +19,10 @@ class RiverfishTests(unittest.TestCase) :
 
 	def setUp(self) :
 		self.rivername = self._alphaShuffle()
-		self.client = memcache_exceptional.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
+		if not hasattr(self, 'client') :
+			self.client = memcache_exceptional.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
+		else :
+			self.client.flush_cas()
 
 	def test_create(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
