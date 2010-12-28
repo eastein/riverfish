@@ -52,14 +52,17 @@ class DefaultLevels :
 	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
 
 def filter_key_on_one_arg(f) :
-    def _inner(self, arg) :
-	r = []
-	for m in f(self, arg) :
-		if m['KEY'] == arg :
-			r.append(m)
-	return r
+	def _inner(self, arg) :
+		if self.key_transform :
+			r = []
+			for m in f(self, arg) :
+				if m['KEY'] == arg :
+					r.append(m)
+			return r
+		else :
+			return f(self, arg)
 
-    return _inner
+	return _inner
 
 class River(object) :
 	@classmethod
