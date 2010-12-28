@@ -4,6 +4,8 @@
 * what happens if memcached permanently fails at some point?
 ** secondary store/queue for cleanup operations?
 * sharing client? can this cause issues?
+* metadata currently can't have any lists in it (directly), they get turned into tuples...
+** threadsafe for one client to be accessed from multiple threads?  The cache for cas is shared...
 * keeping one client over the length of operations with a river object? this could be bad too..
 * if I am going to allow reindexing, river objects can't cache IND anymore.
 * transaction failure during index node creation can produce index node clutter if the transaction isn't retried until success
@@ -38,6 +40,7 @@ class RiverDeletedException(SafelyFailedException) :
 class ContentionFailureException(SafelyFailedException, PartialFailureException) :
 	"""The operation failed partially due to contention."""
 
+# TODO verify that the code works even with less levels, or document the limit
 DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000]
 
 class River(object) :
@@ -63,7 +66,6 @@ class River(object) :
 			if not data :
 				raise RiverDoesNotExistException("river %s does not exist" % self.name)
 			self.ind = data['IND']
-
 
 	def _unpack(self, v) :
 		"""
@@ -115,16 +117,15 @@ class River(object) :
 	def _getIndexNode(self, key, indl) :
 		return self._gupack(self._indexNodeName(key, indl))
 
-	def _addIndexNode(self, key, indl, subindl) :
+	def _addIndexNode(self, key, indl) :
 		index_node = self._getsIndexNode(key, indl)
-		subindl_div = key / subindl
 		ikey = self._indexNodeName(key, indl)
 		if index_node :
-			index_node['FIN'] = min(subindl_div, index_node['FIN'])
-			index_node['LIN'] = max(subindl_div, index_node['LIN'])
+			index_node['FIN'] = min(key, index_node['FIN'])
+			index_node['LIN'] = max(key, index_node['LIN'])
 			return self._cupack(ikey, index_node)
 		else :
-			return self._apack(ikey, {'FIN' : subindl_div, 'LIN' : subindl_div})
+			return self._apack(ikey, {'FIN' : key, 'LIN' : key})
 
 	# list nodes (a type of index node)
 	def _addMetaData(self, key, indl, metadata) :
@@ -132,6 +133,9 @@ class River(object) :
 		list_node = self._getsIndexNode(key, indl)
 		if list_node :
 			meta_list = list(list_node.get(key, []))
+			if metadata in meta_list :
+				# retries won't know if it's in there yet. Just succeed if the exact metadata exists already.
+				return True
 			meta_list.append(metadata)
 			meta_list.sort(cmp=lambda d1,d2: int.__cmp__(d1['KEY'], d2['KEY']))
 			list_node[key] = meta_list
@@ -143,6 +147,7 @@ class River(object) :
 
 	@property
 	def count(self) :
+		# TODO how to make this count work correctly in cases of transaction failure during add.. it's not done 
 		return self._getRiverNode()['TOT']
 
 	"""
@@ -153,26 +158,36 @@ class River(object) :
 		if not river_node :
 			raise RiverDeletedException("Once the river flows to the sea, is it still a river?")
 		
-		if river_node['FIN'] is None :
-			index_nodes = {}
-			for indl_i in range(len(self.ind) - 1) :
-				if not self._addIndexNode(key, self.ind[indl_i], self.ind[indl_i + 1]) :
-					raise ContentionFailureException("could not add index node for key %d at level %d" % (key, self.ind[indl_i]))
-			low_level = self.ind[len(self.ind)-1]
-			if not self._addMetaData(key, low_level, metadata) :
-				raise ContentionFailureException("could not add list node for key %d at level %d" % (key, low_level))
+		for indl_i in xrange(len(self.ind) - 1) :
+			if not self._addIndexNode(key, self.ind[indl_i]) :
+				raise ContentionFailureException("could not add/update index node for key %d at level %d" % (key, self.ind[indl_i]))
+		low_level = self.ind[len(self.ind)-1]
+		if not self._addMetaData(key, low_level, metadata) :
+			raise ContentionFailureException("could not add list node for key %d at level %d" % (key, low_level))
 
-			# update main node here? FIN/LIN update...
+		updated = False
+		if river_node['FIN'] is None :
+			river_node['FIN'] = key
+			updated = True
 		else :
-			raise RuntimeError("you can only add one thing so far.")
+			if river_node['FIN'] != key :
+				river_node['FIN'] = min(river_node['FIN'], key)
+				updated = True
+		if river_node['LIN'] is None :
+			river_node['LIN'] = key
+			updated = True
+		else :
+			if river_node['LIN'] != key :
+				river_node['LIN'] = max(river_node['LIN'], key)
+				updated = True
+
+		if updated and not self._cupack(self.rnkey, river_node) :
+			raise ContentionFailureException("could not update the river node for FIN/LIN update.")
 
 	def get(self, key) :
 		river_node = self._getRiverNode()
 		if not river_node :
 			raise RiverDeletedException("Once the river flows to the sea, is it still a river?")
-		
-		#if river_node['FIN'] is None or river_node['LIN'] is None :
-		#	return []
 
 		low_level = self.ind[len(self.ind)-1]
 		meta_data = self._getIndexNode(key, low_level)
@@ -187,7 +202,57 @@ class River(object) :
 class Boat(object) :
 	def __init__(self, river) :
 		self.river = river
+		self.iter = self.iterate()
 
-	def next() :
-		# TODO make this work.
-		raise StopIteration()
+	def iterate(self) :
+		OP_GET_RN = 0
+		OP_GET_IN = 1
+		OP_GET_LN = 2
+		OP_EMIT = 3
+
+		stack = []
+		stack.append((OP_GET_RN, None))
+		while stack :
+			op, arg = stack.pop()
+			if op == OP_GET_RN :
+				rn = self.river._getRiverNode()
+				ind = rn['IND']
+				fin = rn['FIN']
+				lin = rn['LIN']
+				if fin is not None and lin is not None :
+					iind = 0
+					fks = fin - (fin % ind[iind])
+					lks = lin - (lin % ind[iind])
+					for key in xrange(lks, fks-1, -ind[iind]) :
+						# reverse the order of top level index lookups, add to the stack (start low)
+						stack.append((OP_GET_IN, (key, 0)))
+			elif op == OP_GET_IN :
+				key, iind = arg
+				index_node = self.river._getIndexNode(key, ind[iind])
+				if not index_node :
+					continue
+				fin = index_node['FIN']
+				lin = index_node['LIN']
+				if fin is not None and lin is not None :
+					next_iind = iind + 1
+					if next_iind < len(ind) - 1 :
+						next_op = OP_GET_IN
+					else :
+						next_op = OP_GET_LN
+					fks = fin - (fin % ind[next_iind])
+					lks = lin - (lin % ind[next_iind])
+					for key in xrange(lks, fks-1, -ind[next_iind]) :
+						stack.append((next_op, (key, next_iind)))
+			elif op == OP_GET_LN :
+				key, iind = arg
+				list_node = self.river._getIndexNode(key, ind[iind])
+				if not list_node :
+					continue
+				list_keys = list_node.keys()
+				list_keys.sort()
+				for key in list_keys :
+					for value in list_node[key] :
+						yield key, value
+
+	def next(self) :
+		return self.iter.next()

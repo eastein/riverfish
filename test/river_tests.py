@@ -39,3 +39,26 @@ class RiverfishTests(unittest.TestCase) :
 		d = {'KEY' : k, 'HI' : 'THERE'}
 		river.add(k, d)
 		self.assertEquals([d], river.get(k))
+
+	def _assertIterEquals(self, riv, exp) :
+		ind = 0
+		for i in riv :
+			print i
+			self.assertEquals(exp[ind], i)
+			ind += 1
+		self.assertEquals(len(exp), ind)
+
+	def test_iteration_empty(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		self._assertIterEquals(river, [])
+
+	def test_iteration_one(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		river.add(450, {'hi' : 'test'})
+		self._assertIterEquals(river, [(450, {'hi' : 'test'})])
+
+	def test_iteration_two(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		river.add(3, 'test1')
+		river.add(riverfish.DEFAULT_INDEX_LEVELS[0] + 3, 'test2')
+		self._assertIterEquals(river, [(3, 'test1'), (riverfish.DEFAULT_INDEX_LEVELS[0]+3, 'test2')])
