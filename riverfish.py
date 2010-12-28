@@ -197,8 +197,20 @@ class River(object) :
 
 		return list(meta_data[key])
 
+	@property
+	def reverse(self) :
+		return Wave(self, options=['REV'])
+
 	def __iter__(self) :
 		return Boat(self)
+
+class Wave(River) :
+	def __init__(self, river, options=[]) :
+		self.river = river
+		self.options = options
+
+	def __getattr__(self, attr) :
+		return getattr(self.river, attr)
 
 class Boat(object) :
 	def __init__(self, river) :
@@ -206,6 +218,11 @@ class Boat(object) :
 		self.iter = self.iterate()
 
 	def iterate(self) :
+		reverse = False
+		if hasattr(self.river, 'options') :
+			if 'REV' in self.river.options :
+				reverse = True
+
 		OP_GET_RN = 0
 		OP_GET_IN = 1
 		OP_GET_LN = 2
@@ -223,7 +240,11 @@ class Boat(object) :
 					iind = 0
 					fks = fin - (fin % ind[iind])
 					lks = lin - (lin % ind[iind])
-					for key in xrange(lks, fks-1, -ind[iind]) :
+					if reverse :
+						sub = range(fks, lks+1, ind[iind])
+					else :
+						sub = xrange(lks, fks-1, -ind[iind])
+					for key in sub :
 						# reverse the order of top level index lookups, add to the stack (start low)
 						stack.append((OP_GET_IN, (key, 0)))
 			elif op == OP_GET_IN :
@@ -241,7 +262,12 @@ class Boat(object) :
 						next_op = OP_GET_LN
 					fks = fin - (fin % ind[next_iind])
 					lks = lin - (lin % ind[next_iind])
-					for key in xrange(lks, fks-1, -ind[next_iind]) :
+
+					if reverse :
+						sub = range(fks, lks+1, ind[next_iind])
+					else :
+						sub = xrange(lks, fks-1, -ind[next_iind])
+					for key in sub :
 						stack.append((next_op, (key, next_iind)))
 			elif op == OP_GET_LN :
 				key, iind = arg
@@ -249,10 +275,17 @@ class Boat(object) :
 				if not list_node :
 					continue
 				list_keys = list_node.keys()
-				list_keys.sort()
-				for key in list_keys :
-					for value in list_node[key] :
-						yield key, value
+				list_keys.sort(reverse=reverse)
+				if reverse :
+					for key in list_keys :
+						lv = list(list_node[key])
+						lv.reverse()
+						for value in lv :
+							yield key, value						
+				else :
+					for key in list_keys :
+						for value in list_node[key] :
+							yield key, value
 
 	def next(self) :
 		return self.iter.next()
