@@ -44,17 +44,18 @@ class ContentionFailureException(SafelyFailedException, PartialFailureException)
 	"""The operation failed partially due to contention."""
 
 # TODO verify that the code works even with less levels, or document the limit
+# do not modify this at runtime, it'll break things.
 DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000, 10000]
 
 class River(object) :
 	# TODO validate name as fitting a regex
-	def __init__(self, client, name, create=False, key_transform=None) :
+	def __init__(self, client, name, create=False, key_transform=None, ind=DEFAULT_INDEX_LEVELS) :
 		self.client = client
 		self.name = name
 		self.rnkey = 't:%s:rn' % self.name
 		
 		if create :
-			self.ind = DEFAULT_INDEX_LEVELS[:]
+			self.ind = ind
 
 			data = {
 				'IND' : self.ind,
