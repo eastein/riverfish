@@ -6,11 +6,14 @@
 * verify that the code works even with less levels, or document the limit
 * metadata currently can't have any lists in it (directly), they get turned into tuples...
 ** threadsafe for one client to be accessed from multiple threads?  The cache for cas is shared... NOT SAFE
+* one thread doing multiple ops at once is bad too; for example, iterating and doing dels/adds during the iteration
 * keeping one client over the length of operations with a river object? this could be bad too..
 * if I am going to allow reindexing, river objects can't cache IND anymore.
 * transaction failure during index node creation can produce index node clutter if the transaction isn't retried until success
 * check that every added metadata has a KEY which is an int and probably has UUID, size, mime type, and encoding?
 * maybe move away from msgpack, it's not great for list/tuple differences
+* write a decorator that can work with either one-off or generator style functions and does locking on the client resource
+** perhaps force cas flush at the start of all operations?
 """
 
 import uuid
@@ -50,6 +53,7 @@ class ContentionFailureException(SafelyFailedException, PartialFailureException)
 class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
 	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
+	DEFAULT = SLOW_UPDATE_REAL_TIME
 
 def filter_key_on_one_arg(f) :
 	def _inner(self, arg) :
@@ -75,7 +79,7 @@ class River(object) :
 		return 0
 
 	# TODO validate name as fitting a regex
-	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.SLOW_UPDATE_REAL_TIME) :
+	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT) :
 		self.client = client
 		self.name = name
 		self.rnkey = 't:%s:rn' % self.name
@@ -102,7 +106,6 @@ class River(object) :
 			try :
 				self.key_transform = getattr(type(self), key_transform)
 			except AttributeError :
-				# TODO make a specific attribute error here.... it's a case where the KT isn't available.
 				raise RiverKeyTransformIncompatibleException("KT %s is not available or is unsupported." % key_transform)
 		else :
 			self.key_transform = None
@@ -113,7 +116,6 @@ class River(object) :
 		_meta['KEY'] = _meta['_KEY']
 		del _meta['_KEY']
 		return _meta
-
 
 	def _unpack(self, v) :
 		"""
@@ -260,6 +262,10 @@ class River(object) :
 
 	def __iter__(self) :
 		return Boat(self)
+
+class StringKeyedRiver(River) :
+	def __init__(self, client, name, create=False, ind=DefaultLevels.CRC_OPTIMIZED) :
+		River.__init__(self, client, name, create=create, ind=ind, key_transform='kt_stringcrc')
 
 class Wave(River) :
 	def __init__(self, river, options=[]) :

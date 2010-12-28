@@ -78,8 +78,8 @@ class RiverfishTests(unittest.TestCase) :
 	def test_iteration_two(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		river.add(3, {'KEY' : 3, 'test1' : 'test1'})
-		river.add(riverfish.DefaultLevels.SLOW_UPDATE_REAL_TIME[0] + 3, {'KEY' : riverfish.DefaultLevels.SLOW_UPDATE_REAL_TIME[0] + 3, 'test2' : 'test2'})
-		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (riverfish.DefaultLevels.SLOW_UPDATE_REAL_TIME[0]+3, {'KEY' : riverfish.DefaultLevels.SLOW_UPDATE_REAL_TIME[0] + 3, 'test2' : 'test2'})])
+		river.add(riverfish.DefaultLevels.DEFAULT[0] + 3, {'KEY' : riverfish.DefaultLevels.DEFAULT[0] + 3, 'test2' : 'test2'})
+		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (riverfish.DefaultLevels.DEFAULT[0]+3, {'KEY' : riverfish.DefaultLevels.DEFAULT[0] + 3, 'test2' : 'test2'})])
 
 	def test_iteration_two_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
@@ -97,7 +97,7 @@ class RiverfishTests(unittest.TestCase) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 
 		n_items = 1000
-		n_range = riverfish.DefaultLevels.SLOW_UPDATE_REAL_TIME[0]*10
+		n_range = riverfish.DefaultLevels.DEFAULT[0]*10
 		total_data = {}
 		for i in xrange(n_items) :
 			rk = random.randint(0, n_range)
@@ -117,7 +117,7 @@ class RiverfishTests(unittest.TestCase) :
 		self._assertIterEquals(river, exp)
 
 	def test_kt_crc32_iterate(self) :
-		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_stringcrc')
+		river = riverfish.StringKeyedRiver(self.client, self.rivername, create=True)
 		h1 = {'KEY' : 'hi1', 'DATA' : 'test1'}
 		h2 = {'KEY' : 'hi2', 'DATA' : 'test2'}
 		h3 = {'KEY' : 'hi3', 'DATA' : 'test3'}
@@ -127,13 +127,13 @@ class RiverfishTests(unittest.TestCase) :
 		self._assertIterEquals(river, [('hi1', h1), ('hi3', h3), ('hi2', h2)])
 
 	def test_kt_crc32_get1(self) :
-		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_stringcrc')
+		river = riverfish.StringKeyedRiver(self.client, self.rivername, create=True)
 		t1 = {'KEY' : 'hi1', 'DATA' : 'test1'}
 		river.add('hi1', t1)
 		self.assertEquals([t1], river.get('hi1'))
 
 	def test_kt_crc32_get2(self) :
-		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_stringcrc')
+		river = riverfish.StringKeyedRiver(self.client, self.rivername, create=True)
 		t1 = {'KEY' : 'hi1', 'DATA' : 'test1'}
 		t2 = {'KEY' : 'hi1', 'DATA' : 'test2'}
 		river.add('hi1', t1)
