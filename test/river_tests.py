@@ -58,20 +58,20 @@ class RiverfishTests(unittest.TestCase) :
 
 	def test_iteration_one(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
-		river.add(450, {'hi' : 'test'})
-		self._assertIterEquals(river, [(450, {'hi' : 'test'})])
+		river.add(450, {'KEY' : 450, 'hi' : 'there'})
+		self._assertIterEquals(river, [(450, {'KEY' : 450, 'hi' : 'there'})])
 
 	def test_iteration_two(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
-		river.add(3, 'test1')
-		river.add(riverfish.DEFAULT_INDEX_LEVELS[0] + 3, 'test2')
-		self._assertIterEquals(river, [(3, 'test1'), (riverfish.DEFAULT_INDEX_LEVELS[0]+3, 'test2')])
+		river.add(3, {'KEY' : 3, 'test1' : 'test1'})
+		river.add(riverfish.DEFAULT_INDEX_LEVELS[0] + 3, {'KEY' : riverfish.DEFAULT_INDEX_LEVELS[0] + 3, 'test2' : 'test2'})
+		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (riverfish.DEFAULT_INDEX_LEVELS[0]+3, {'KEY' : riverfish.DEFAULT_INDEX_LEVELS[0] + 3, 'test2' : 'test2'})])
 
 	def test_iteration_two_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
-		river.add(3, 'test1')
-		river.add(3, 'test2')
-		self._assertIterEquals(river, [(3, 'test1'), (3, 'test2')])
+		river.add(3, {'KEY' : 3, 'test1' : 'test1'})
+		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
+		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (3, {'KEY' : 3, 'test2' : 'test2'})])
 
 	def test_random_sequenced_insert_ordered_iteration(self) :
 		n_items = 100
@@ -79,5 +79,5 @@ class RiverfishTests(unittest.TestCase) :
 		keys = []
 		datas = []
 		for i in xrange(n_items) :
-			keys.append(random.randint(0, n_range)
+			keys.append(random.randint(0, n_range))
 			datas.append(self._alphaShuffle)

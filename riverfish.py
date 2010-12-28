@@ -139,7 +139,7 @@ class River(object) :
 			meta_list.append(metadata)
 			meta_list.sort(cmp=lambda d1,d2: int.__cmp__(d1['KEY'], d2['KEY']))
 			list_node[key] = meta_list
-			return self._cupack(likey, meta_list)
+			return self._cupack(likey, list_node)
 		else :
 			# TODO benchmark dict vs giant list... perhaps use a plain list here? Not sure.
 			# should I optimise for lookups or iteration?
