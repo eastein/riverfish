@@ -1,4 +1,4 @@
-import memcache
+import memcache_exceptional
 import random
 import riverfish
 import unittest
@@ -10,7 +10,7 @@ class RiverfishTests(unittest.TestCase) :
 		name = list('abcdefghijklmnopqrstuvwxyz')
 		random.shuffle(name)
 		self.rivername = reduce(lambda a,b: a+b, name)
-		self.client = memcache.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
+		self.client = memcache_exceptional.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
 
 	def test_create(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)

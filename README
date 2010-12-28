@@ -8,6 +8,11 @@ STATUS
 
 Riverfish is in pre-release and is not ready for use.
 
+TESTING
+
+To run the test suite, you will need to have a memcached server running on localhost that you are OK with arbitrary
+operations being performed on.
+
 DEPENDENCIES
 
 bzr+ssh://bazaar.launchpad.net/%7Eestein/python-memcached/exceptional/
