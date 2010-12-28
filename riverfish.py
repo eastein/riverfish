@@ -51,10 +51,25 @@ class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
 	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
 
+def filter_key_on_one_arg(f) :
+    def _inner(self, arg) :
+	r = []
+	for m in f(self, arg) :
+		if m['KEY'] == arg :
+			r.append(m)
+	return r
+
+    return _inner
+
 class River(object) :
 	@classmethod
 	def kt_stringcrc(cls, k) :
 		return crc32(k) & 0xffffffff
+
+
+	@classmethod
+	def kt_allzero(cls, k) :
+		return 0
 
 	# TODO validate name as fitting a regex
 	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.SLOW_UPDATE_REAL_TIME) :
@@ -217,6 +232,7 @@ class River(object) :
 		if updated and not self._cupack(self.rnkey, river_node) :
 			raise ContentionFailureException("could not update the river node for FIN/LIN update.")
 
+	@filter_key_on_one_arg
 	def get(self, key) :
 		if self.key_transform :
 			key = self.key_transform(key)

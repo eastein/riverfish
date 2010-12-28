@@ -139,3 +139,9 @@ class RiverfishTests(unittest.TestCase) :
 		river.add('hi1', t1)
 		river.add('hi1', t2)
 		self.assertEquals([t1, t2], river.get('hi1'))
+
+	def test_kt_collision_get(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_allzero')
+		river.add('a', {'KEY' : 'a', 'DATA' : 'should get this.'})
+		river.add('b', {'KEY' : 'b', 'DATA' : 'should not get this.'})
+		self.assertEquals(river.get('a'), [{'KEY' : 'a', 'DATA' : 'should get this.'}])
