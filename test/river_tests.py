@@ -9,11 +9,10 @@ class RiverfishTests(unittest.TestCase) :
 	def _alphaShuffle(self) :
 		name = list('abcdefghijklmnopqrstuvwxyz')
 		random.shuffle(name)		
-		return name
+		return reduce(lambda a,b: a+b, name)
 
 	def setUp(self) :
-		name = self._alphaShuffle()
-		self.rivername = reduce(lambda a,b: a+b, name)
+		self.rivername = self._alphaShuffle()
 		self.client = memcache_exceptional.Client(['127.0.0.1:11211'], immortal=True, pickleProtocol=True)
 
 	def test_create(self) :
@@ -47,7 +46,6 @@ class RiverfishTests(unittest.TestCase) :
 	def _assertIterEquals(self, riv, exp) :
 		ind = 0
 		for i in riv :
-			print i
 			self.assertEquals(exp[ind], i)
 			ind += 1
 		self.assertEquals(len(exp), ind)
@@ -73,11 +71,25 @@ class RiverfishTests(unittest.TestCase) :
 		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
 		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (3, {'KEY' : 3, 'test2' : 'test2'})])
 
-	def test_random_sequenced_insert_ordered_iteration(self) :
+	def test_random_sequenced_insert_ordered_iteration_no_keys_equal(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+
 		n_items = 100
 		n_range = riverfish.DEFAULT_INDEX_LEVELS[0]*10
-		keys = []
-		datas = []
+		total_data = {}
 		for i in xrange(n_items) :
-			keys.append(random.randint(0, n_range))
-			datas.append(self._alphaShuffle)
+			rk = random.randint(0, n_range)
+			while rk in total_data :
+				rk = random.randint(0, n_range)
+			rd = self._alphaShuffle()
+			dd = {'KEY' : rk, 'DATA' : rd}
+			total_data[rk] = dd
+			river.add(rk, dd)
+
+		exp = []
+		tk = total_data.keys()
+		tk.sort()
+		for k in tk :
+			exp.append((k, total_data[k]))
+
+		self._assertIterEquals(river, exp)

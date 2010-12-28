@@ -9,6 +9,8 @@
 * keeping one client over the length of operations with a river object? this could be bad too..
 * if I am going to allow reindexing, river objects can't cache IND anymore.
 * transaction failure during index node creation can produce index node clutter if the transaction isn't retried until success
+* check that every added metadata has a KEY which is an int and probably has UUID, size, mime type, and encoding?
+* maybe move away from msgpack, it's not great for list/tuple differences
 """
 
 import uuid
