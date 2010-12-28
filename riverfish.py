@@ -37,6 +37,9 @@ class RiverAlreadyExistsException(SafelyFailedException, NoopException) :
 class RiverDoesNotExistException(SafelyFailedException, NoopException) :
 	"""River does not exist."""
 
+class RiverKeyTransformIncompatibleException(SafelyFailedException, NoopException) :
+	"""The key transform requested is not available."""
+
 # TODO determine if this qualifies as a NoopException
 class RiverDeletedException(SafelyFailedException) :
 	"""The River in use was deleted. The current operation failed."""
@@ -46,8 +49,13 @@ class ContentionFailureException(SafelyFailedException, PartialFailureException)
 
 class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
+	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
 
 class River(object) :
+	@classmethod
+	def kt_stringcrc(cls, k) :
+		return crc32(k) & 0xffffffff
+
 	# TODO validate name as fitting a regex
 	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.SLOW_UPDATE_REAL_TIME) :
 		self.client = client
@@ -72,7 +80,22 @@ class River(object) :
 			self.ind = data['IND']
 			key_transform = data['KT']
 
-	
+		if key_transform :
+			try :
+				self.key_transform = getattr(type(self), key_transform)
+			except AttributeError :
+				# TODO make a specific attribute error here.... it's a case where the KT isn't available.
+				raise RiverKeyTransformIncompatibleException("KT %s is not available or is unsupported." % key_transform)
+		else :
+			self.key_transform = None
+
+	@classmethod
+	def _untransform_key(cls, meta) :
+		_meta = dict(meta)
+		_meta['KEY'] = _meta['_KEY']
+		del _meta['_KEY']
+		return _meta
+
 
 	def _unpack(self, v) :
 		"""
@@ -156,6 +179,14 @@ class River(object) :
 	Add a fish to the river, given the fish's metadata.
 	"""
 	def add(self, key, metadata) :
+		metadata = dict(metadata)
+
+		if self.key_transform :
+			metadata['_KEY'] = metadata['KEY']
+			metadata['KEY'] = self.key_transform(metadata['KEY'])
+			key = metadata['KEY']
+
+		# TODO key type/range checking, metadata validation; (KEY required or automatically set, _KEY not allowed)
 		river_node = self._getsRiverNode()
 		if not river_node :
 			raise RiverDeletedException("Once the river flows to the sea, is it still a river?")
@@ -187,6 +218,9 @@ class River(object) :
 			raise ContentionFailureException("could not update the river node for FIN/LIN update.")
 
 	def get(self, key) :
+		if self.key_transform :
+			key = self.key_transform(key)
+
 		river_node = self._getRiverNode()
 		if not river_node :
 			raise RiverDeletedException("Once the river flows to the sea, is it still a river?")
@@ -196,7 +230,10 @@ class River(object) :
 		if not meta_data or key not in meta_data :
 			return []
 
-		return list(meta_data[key])
+		if self.key_transform :
+			return [River._untransform_key(md) for md in meta_data[key]]
+		else :
+			return list(meta_data[key])
 
 	@property
 	def reverse(self) :
@@ -277,16 +314,20 @@ class Boat(object) :
 					continue
 				list_keys = list_node.keys()
 				list_keys.sort(reverse=reverse)
-				if reverse :
-					for key in list_keys :
-						lv = list(list_node[key])
-						lv.reverse()
-						for value in lv :
-							yield key, value						
+
+				if self.river.key_transform :
+					metadata_filter_function = River._untransform_key
+					key_filter_function = lambda k, m: m['KEY']
 				else :
-					for key in list_keys :
-						for value in list_node[key] :
-							yield key, value
+					metadata_filter_function = lambda m: m
+					key_filter_function = lambda k, m: k
+
+				for key in list_keys :
+					lv = [metadata_filter_function(m) for m in list_node[key]]
+					if reverse :
+						lv.reverse()
+					for value in lv :
+						yield key_filter_function(key, value), value						
 
 	def next(self) :
 		return self.iter.next()
