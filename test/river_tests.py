@@ -71,10 +71,10 @@ class RiverfishTests(unittest.TestCase) :
 		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
 		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (3, {'KEY' : 3, 'test2' : 'test2'})])
 
-	def test_random_sequenced_insert_ordered_iteration_no_keys_equal(self) :
+	def test_1000_random_sequenced_inserts_ordered_iteration_no_keys_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 
-		n_items = 100
+		n_items = 1000
 		n_range = riverfish.DEFAULT_INDEX_LEVELS[0]*10
 		total_data = {}
 		for i in xrange(n_items) :
