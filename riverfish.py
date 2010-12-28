@@ -208,7 +208,6 @@ class Boat(object) :
 		OP_GET_RN = 0
 		OP_GET_IN = 1
 		OP_GET_LN = 2
-		OP_EMIT = 3
 
 		stack = []
 		stack.append((OP_GET_RN, None))
