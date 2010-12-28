@@ -80,6 +80,7 @@ class River(object) :
 	def kt_allzero(cls, k) :
 		return 0
 
+	# fail if ind, ktr, or unique is supplied in a forceful way (included on the command) and create is false and it conflicts
 	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT, unique=False) :
 		self.client = client
 		self.name = name
