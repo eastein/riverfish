@@ -43,7 +43,7 @@ class ContentionFailureException(SafelyFailedException, PartialFailureException)
 	"""The operation failed partially due to contention."""
 
 # TODO verify that the code works even with less levels, or document the limit
-DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000]
+DEFAULT_INDEX_LEVELS = [10000000, 1000000, 100000, 10000]
 
 class River(object) :
 	# TODO validate name as fitting a regex
@@ -56,7 +56,7 @@ class River(object) :
 			self.ind = DEFAULT_INDEX_LEVELS[:]
 
 			data = {
-				'IND' : DEFAULT_INDEX_LEVELS,
+				'IND' : self.ind,
 				'FIN' : None,
 				'LIN' : None,
 				'TOT' : 0
