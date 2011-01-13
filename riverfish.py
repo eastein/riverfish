@@ -97,8 +97,9 @@ class River(object) :
 				'KTR' : key_transform,
 				'UNQ' : self.unique
 			}
-			if not self.client.add(self.rnkey, msgpack.packs(data)) :
+			if not self._apack(self.rnkey, data) :
 				raise RiverAlreadyExistsException("river %s already exists" % self.name)
+
 		else :
 			data = self._getRiverNode()
 			if not data :
@@ -222,6 +223,7 @@ class River(object) :
 
 		# TODO key type/range checking, metadata validation; (KEY required or automatically set, _KEY not allowed)
 		river_node = self._getsRiverNode()
+		
 		if not river_node :
 			raise RiverDeletedException("Once the river flows to the sea, is it still a river?")
 		
