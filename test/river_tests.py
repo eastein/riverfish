@@ -93,6 +93,13 @@ class RiverfishTests(unittest.TestCase) :
 		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
 		self._assertIterEquals(river.reverse, [(3, {'KEY' : 3, 'test2' : 'test2'}), (3, {'KEY' : 3, 'test1' : 'test1'})])
 
+	def test_iteration_reverse_notequal(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		kbig = 3 + 2 * riverfish.DefaultLevels.DEFAULT[-1:][0]
+		river.add(kbig, {'KEY' : kbig, 'test1' : 'test1'})
+		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
+		self._assertIterEquals(river.reverse, [(kbig, {'KEY' : kbig, 'test1' : 'test1'}), (3, {'KEY' : 3, 'test2' : 'test2'})])
+
 	def test_1000_random_sequenced_inserts_ordered_iteration_no_keys_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 
