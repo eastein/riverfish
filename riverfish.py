@@ -53,6 +53,9 @@ class RiverDeletedException(SafelyFailedException) :
 class ContentionFailureException(SafelyFailedException, PartialFailureException) :
 	"""The operation failed partially due to contention."""
 
+class DisallowedMetadataKeyException(SafelyFailedException, PartialFailureException) :
+	"""Keys beginning with _ are not allowed in the metadata"""
+
 class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
 	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
@@ -215,6 +218,10 @@ class River(object) :
 	"""
 	def add(self, key, metadata) :
 		metadata = dict(metadata)
+
+		for k in metadata.keys() :
+			if k.startswith('_') :
+				raise DisallowedMetadataKeyException("metadata key '%s' disallowed" % k)
 
 		if self.key_transform :
 			metadata['_KEY'] = metadata['KEY']

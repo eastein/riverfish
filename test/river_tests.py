@@ -42,6 +42,11 @@ class RiverfishTests(unittest.TestCase) :
 	def test_add(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		river.add(350000, {'KEY' : 350000, 'HI' : 'THERE'})
+		try :
+			river.add(4000, {'KEY' : 4000, '_KEY' : 4000, 'HELLO' : 'TEST'})
+			self.fail("should have failed with _KEY key in data")
+		except riverfish.DisallowedMetadataKeyException :
+			pass
 
 	def test_get(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
