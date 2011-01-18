@@ -101,6 +101,83 @@ class RiverfishTests(unittest.TestCase) :
 		except riverfish.IterationOptionsException :
 			pass
 
+	def test_iteration_double_lower_bound_fails(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		try :
+			for x in river.lowerbound(0).lowerbound(0) :
+				pass
+			self.fail("should not allow double lowerbound")
+		except riverfish.IterationOptionsException :
+			pass
+
+	def test_iteration_lower_bound_key_transform(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, key_transform='kt_cast')
+		river.add("3", {"KEY" : "3", 'A' : 'A'})
+		river.add("4", {"KEY" : "4", 'A' : 'B'})
+		river.add("5", {"KEY" : "5", 'A' : 'C'})
+		self._assertIterEquals(river.lowerbound("4"), [("4", {"KEY" : "4", 'A' : 'B'}), ("5", {"KEY" : "5", 'A' : 'C'})])
+
+	def test_iteration_double_upper_bound_fails(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		try :
+			for x in river.upperbound(0).upperbound(0) :
+				pass
+			self.fail("should not allow double upperbound")
+		except riverfish.IterationOptionsException :
+			pass
+
+	def test_internal_minn(self) :
+		self.assertEquals(riverfish.minn(None, None), None)
+		self.assertEquals(riverfish.minn(None, 3), 3)
+		self.assertEquals(riverfish.minn(None, 0), 0)
+		self.assertEquals(riverfish.minn(3, None), 3)
+		self.assertEquals(riverfish.minn(0, None), 0)
+		self.assertEquals(riverfish.minn(None, -3), -3)
+		self.assertEquals(riverfish.minn(-3, None), -3)
+		self.assertEquals(riverfish.minn(-3, -5), -5)
+		self.assertEquals(riverfish.minn(3, 5), 3)
+
+	def test_iteration_lower_bound(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		kbig = 3 + 2 * riverfish.DefaultLevels.DEFAULT[-1:][0]
+		river.add(1, {'KEY' : 1, 'test' : 'test1'})
+		river.add(2, {'KEY' : 2, 'test' : 'test2'})
+		river.add(kbig, {'KEY' : kbig, 'test' : 'test3'})
+		self._assertIterEquals(river.lowerbound(2), [(2, {'KEY' : 2, 'test' : 'test2'}), (kbig, {'KEY' : kbig, 'test' : 'test3'})])
+
+	def test_iteration_lower_bound_reversed(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		kbig = 3 + 2 * riverfish.DefaultLevels.DEFAULT[-1:][0]
+		river.add(1, {'KEY' : 1, 'test' : 'test1'})
+		river.add(2, {'KEY' : 2, 'test' : 'test2'})
+		river.add(kbig, {'KEY' : kbig, 'test' : 'test3'})
+		self._assertIterEquals(river.lowerbound(2).reverse, [(kbig, {'KEY' : kbig, 'test' : 'test3'}), (2, {'KEY' : 2, 'test' : 'test2'})])
+		self._assertIterEquals(river.reverse.lowerbound(2), [(kbig, {'KEY' : kbig, 'test' : 'test3'}), (2, {'KEY' : 2, 'test' : 'test2'})])
+
+	def test_iteration_upper_bound(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		kbig = 3 + 2 * riverfish.DefaultLevels.DEFAULT[-1:][0]
+		river.add(1, {'KEY' : 1, 'test' : 'test1'})
+		river.add(2, {'KEY' : 2, 'test' : 'test2'})
+		river.add(kbig, {'KEY' : kbig, 'test' : 'test3'})
+		self._assertIterEquals(river.upperbound(2), [(1, {'KEY' : 1, 'test' : 'test1'}), (2, {'KEY' : 2, 'test' : 'test2'})])
+
+	def test_iteration_upper_bound_reversed(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		kbig = 3 + 2 * riverfish.DefaultLevels.DEFAULT[-1:][0]
+		river.add(1, {'KEY' : 1, 'test' : 'test1'})
+		river.add(2, {'KEY' : 2, 'test' : 'test2'})
+		river.add(kbig, {'KEY' : kbig, 'test' : 'test3'})
+		self._assertIterEquals(river.upperbound(2).reverse, [(2, {'KEY' : 2, 'test' : 'test2'}), (1, {'KEY' : 1, 'test' : 'test1'})])
+		self._assertIterEquals(river.reverse.upperbound(2), [(2, {'KEY' : 2, 'test' : 'test2'}), (1, {'KEY' : 1, 'test' : 'test1'})])
+
+	def test_iteration_upper_bound_key_transform(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, key_transform='kt_cast')
+		river.add("3", {"KEY" : "3", 'A' : 'A'})
+		river.add("4", {"KEY" : "4", 'A' : 'B'})
+		river.add("5", {"KEY" : "5", 'A' : 'C'})
+		self._assertIterEquals(river.upperbound("4"), [("3", {"KEY" : "3", 'A' : 'A'}), ("4", {"KEY" : "4", 'A' : 'B'})])
+
 	def test_iteration_reverse_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		river.add(3, {'KEY' : 3, 'test1' : 'test1'})

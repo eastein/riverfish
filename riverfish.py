@@ -86,6 +86,10 @@ class River(object) :
 	def kt_allzero(cls, k) :
 		return 0
 
+	@classmethod
+	def kt_cast(cls, k) :
+		return long(k)
+
 	# fail if ind, ktr, or unique is supplied in a forceful way (included on the command) and create is false and it conflicts
 	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT, unique=False) :
 		self.client = client
@@ -93,7 +97,9 @@ class River(object) :
 		self.unique = unique
 		self.rnkey = 't:%s:rn' % self.name
 		self.iteration_options = {
-			'REV' : False
+			'REV' : False,
+			'LWR' : None,
+			'UPR' : None
 		}
 
 		if create :
@@ -285,6 +291,32 @@ class River(object) :
 		else :
 			return list(meta_data[key])
 
+	def lowerbound(self, key, key_transformed=False) :
+		"""
+		Creates an (inclusive) lower bound on the key for iteration.  If key_transformed is False and
+		a key transform is in use, key will be transformed before use.
+		"""
+		opt = dict(self.iteration_options)
+		if opt['LWR'] is not None :
+			raise IterationOptionsException("Already has lower bound.  Cannot stack the same options.")
+		if self.key_transform and not key_transformed :
+			key = self.key_transform(key)
+		opt['LWR'] = key
+		return Wave(self, _iteration_options=opt)
+
+	def upperbound(self, key, key_transformed=False) :
+		"""
+		Creates an (inclusive) upper bound on the key for iteration.  If key_transformed is False and
+		a key transform is in use, key will be transformed before use.
+		"""
+		opt = dict(self.iteration_options)
+		if opt['UPR'] is not None :
+			raise IterationOptionsException("Already has upper bound.  Cannot stack the same options.")
+		if self.key_transform and not key_transformed :
+			key = self.key_transform(key)
+		opt['UPR'] = key
+		return Wave(self, _iteration_options=opt)
+
 	@property
 	def reverse(self) :
 		opt = dict(self.iteration_options)
@@ -310,6 +342,23 @@ class Wave(River) :
 	def __getattr__(self, attr) :
 		return getattr(self.river, attr)
 
+def minn(a, b) :
+	"""
+	min function that treats None as larger than everything numeric than smaller.
+	"""
+	if a is None :
+		return b
+	elif b is None :
+		return a
+	return min(a, b)
+
+def fits_border(l, v, u) :
+	if l is not None and v < l :
+		return False
+	elif u is not None and v > u :
+		return False
+	return True
+
 class Boat(object) :
 	def __init__(self, river) :
 		self.river = river
@@ -317,6 +366,8 @@ class Boat(object) :
 
 	def iterate(self) :
 		reverse = self.river.iteration_options['REV']
+		lower = self.river.iteration_options['LWR']
+		upper = self.river.iteration_options['UPR']
 
 		OP_GET_RN = 0
 		OP_GET_IN = 1
@@ -329,8 +380,9 @@ class Boat(object) :
 			if op == OP_GET_RN :
 				rn = self.river._getRiverNode()
 				ind = rn['IND']
-				fin = rn['FIN']
-				lin = rn['LIN']
+				fin = max(lower, rn['FIN'])
+				lin = minn(upper, rn['LIN'])
+
 				if fin is not None and lin is not None :
 					iind = 0
 					fks = fin - (fin % ind[iind])
@@ -347,8 +399,9 @@ class Boat(object) :
 				index_node = self.river._getIndexNode(key, ind[iind])
 				if not index_node :
 					continue
-				fin = index_node['FIN']
-				lin = index_node['LIN']
+				fin = max(lower, index_node['FIN'])
+				lin = minn(upper, index_node['LIN'])
+
 				if fin is not None and lin is not None :
 					next_iind = iind + 1
 					if next_iind < len(ind) - 1 :
@@ -384,7 +437,8 @@ class Boat(object) :
 					if reverse :
 						lv.reverse()
 					for value in lv :
-						yield key_filter_function(key, value), value						
+						if fits_border(lower, key, upper) :
+							yield key_filter_function(key, value), value
 
 	def next(self) :
 		return self.iter.next()
