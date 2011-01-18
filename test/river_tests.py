@@ -92,6 +92,15 @@ class RiverfishTests(unittest.TestCase) :
 		river.add(3, {'KEY' : 3, 'test2' : 'test2'})
 		self._assertIterEquals(river, [(3, {'KEY' : 3, 'test1' : 'test1'}), (3, {'KEY' : 3, 'test2' : 'test2'})])
 
+	def test_iteration_double_reverse_fails(self) :
+		river = riverfish.River(self.client, self.rivername, create=True)
+		try :
+			for x in river.reverse.reverse :
+				pass
+			self.fail("should not allow double reversal")
+		except riverfish.IterationOptionsException :
+			pass
+
 	def test_iteration_reverse_equal(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
 		river.add(3, {'KEY' : 3, 'test1' : 'test1'})

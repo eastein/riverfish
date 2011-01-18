@@ -46,15 +46,18 @@ class RiverDoesNotExistException(SafelyFailedException, NoopException) :
 class RiverKeyTransformIncompatibleException(SafelyFailedException, NoopException) :
 	"""The key transform requested is not available."""
 
+class DisallowedMetadataKeyException(SafelyFailedException, NoopException) :
+	"""Keys beginning with _ are not allowed in the metadata"""
+
+class IterationOptionsException(SafelyFailedException, NoopException) :
+	"""Iteration options are not allowed."""
+
 # TODO determine if this qualifies as a NoopException
 class RiverDeletedException(SafelyFailedException) :
 	"""The River in use was deleted. The current operation failed."""
 
 class ContentionFailureException(SafelyFailedException, PartialFailureException) :
 	"""The operation failed partially due to contention."""
-
-class DisallowedMetadataKeyException(SafelyFailedException, PartialFailureException) :
-	"""Keys beginning with _ are not allowed in the metadata"""
 
 class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
@@ -89,7 +92,10 @@ class River(object) :
 		self.name = name
 		self.unique = unique
 		self.rnkey = 't:%s:rn' % self.name
-		
+		self.iteration_options = {
+			'REV' : False
+		}
+
 		if create :
 			self.ind = ind
 
@@ -281,7 +287,11 @@ class River(object) :
 
 	@property
 	def reverse(self) :
-		return Wave(self, options=['REV'])
+		opt = dict(self.iteration_options)
+		if opt['REV'] :
+			raise IterationOptionsException("Already reversed.  Cannot stack the same options.")
+		opt['REV'] = not opt['REV']
+		return Wave(self, _iteration_options=opt)
 
 	def __iter__(self) :
 		return Boat(self)
@@ -291,9 +301,11 @@ class StringKeyedRiver(River) :
 		River.__init__(self, client, name, create=create, ind=ind, key_transform='kt_stringcrc', unique=unique)
 
 class Wave(River) :
-	def __init__(self, river, options=[]) :
+	def __init__(self, river, _iteration_options=None) :
 		self.river = river
-		self.options = options
+		if _iteration_options is None :
+			_iteration_options = dict(self.river.iteration_options)
+		self.iteration_options = _iteration_options
 
 	def __getattr__(self, attr) :
 		return getattr(self.river, attr)
@@ -304,10 +316,7 @@ class Boat(object) :
 		self.iter = self.iterate()
 
 	def iterate(self) :
-		reverse = False
-		if hasattr(self.river, 'options') :
-			if 'REV' in self.river.options :
-				reverse = True
+		reverse = self.river.iteration_options['REV']
 
 		OP_GET_RN = 0
 		OP_GET_IN = 1
