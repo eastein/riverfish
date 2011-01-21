@@ -7,7 +7,7 @@ import unittest
 # include an in-process memcached daemon to avoid dealing with issues relating to clobbering existing memcached instances
 ## no evictions in this daemon
 # tests that force memcached operations to sleep for random periods or freeze (perhaps allowing stepping from the test suite?)
-## show that during various types of insert, the iteration continues to work at different stages
+## show that during various types of insert and delete, the iteration continues to work at different stages, and not temporary removals or reorderings occur
 ## show that at no point would a failure in an insert result in corruption that failed iteration or get on previously OK data
 ## show that concurrent inserts will not corrupt the db, even in the case of conflicts
 
@@ -54,6 +54,20 @@ class RiverfishTests(unittest.TestCase) :
 		d = {'KEY' : k, 'HI' : 'THERE'}
 		river.add(k, d)
 		self.assertEquals([d], river.get(k))
+
+	def test_get_unique(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, unique=True)
+		k = 350000
+		d = {'KEY' : k, 'HI' : 'THERE'}
+		river.add(k, d)
+		self.assertEquals(d, river.get(k))
+
+	def test_get_unique_nothing_none(self) :
+		river = riverfish.River(self.client, self.rivername, create=True, unique=True)
+		k = 350000
+		d = {'KEY' : k, 'HI' : 'THERE'}
+		river.add(k, d)
+		self.assertEquals(None, river.get(k + 1))
 
 	def test_get_two(self) :
 		river = riverfish.River(self.client, self.rivername, create=True)
@@ -266,6 +280,4 @@ class RiverfishTests(unittest.TestCase) :
 		river = riverfish.River(self.client, self.rivername, create=True, ind=riverfish.DefaultLevels.CRC_OPTIMIZED, key_transform='kt_allzero', unique=True)
 		river.add('a', {'KEY' : 'a', 'DATA' : 'test'})
 		river.add('b', {'KEY' : 'b', 'DATA' : 'test2'})
-		self.assertEquals(river.get('a'), [{'KEY' : 'a', 'DATA' : 'test'}])
-
-
+		self.assertEquals(river.get('a'), {'KEY' : 'a', 'DATA' : 'test'})

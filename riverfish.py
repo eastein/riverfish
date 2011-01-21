@@ -46,6 +46,9 @@ class RiverDoesNotExistException(SafelyFailedException, NoopException) :
 class RiverKeyTransformIncompatibleException(SafelyFailedException, NoopException) :
 	"""The key transform requested is not available."""
 
+class ResultsNotUniqueException(SafelyFailedException, NoopException) :
+	"""The river is set to unique but more than one result was found."""
+
 class DisallowedMetadataKeyException(SafelyFailedException, NoopException) :
 	"""Keys beginning with _ are not allowed in the metadata"""
 
@@ -63,6 +66,21 @@ class DefaultLevels :
 	SLOW_UPDATE_REAL_TIME = [10000000, 1000000, 100000, 10000]
 	CRC_OPTIMIZED = [430000000, 4300000, 43000, 430]
 	DEFAULT = SLOW_UPDATE_REAL_TIME
+
+def singular_if_unique(f) :
+	def _inner(self, arg) :
+		r = f(self, arg)
+		if self.unique :
+			if not r :
+				return None
+			elif len(r) == 1 :
+				return r[0]
+			else :
+				raise ResultsNotUniqueException("got %d items, on unique table" % len(r))
+		else :
+			return r
+
+	return _inner
 
 def filter_key_on_one_arg(f) :
 	def _inner(self, arg) :
@@ -90,7 +108,8 @@ class River(object) :
 	def kt_cast(cls, k) :
 		return long(k)
 
-	# fail if ind, ktr, or unique is supplied in a forceful way (included on the command) and create is false and it conflicts
+	# TODO fail if ind, ktr, or unique is supplied in a forceful way (included on the command) and create is false and it conflicts
+	# TODO fail on unsupported key transform before adding anything to backing datastore
 	def __init__(self, client, name, create=False, key_transform=None, ind=DefaultLevels.DEFAULT, unique=False) :
 		self.client = client
 		self.name = name
@@ -272,6 +291,7 @@ class River(object) :
 		if updated and not self._cupack(self.rnkey, river_node) :
 			raise ContentionFailureException("could not update the river node for FIN/LIN update.")
 
+	@singular_if_unique
 	@filter_key_on_one_arg
 	def get(self, key) :
 		if self.key_transform :
