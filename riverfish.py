@@ -238,7 +238,7 @@ class River(object) :
 				# retries won't know if it's in there yet. Just succeed if the exact metadata exists already.
 				return True
 			meta_list.append(metadata)
-			meta_list.sort(cmp=lambda d1,d2: int.__cmp__(d1['KEY'], d2['KEY']))
+			meta_list.sort(cmp=lambda d1,d2: long.__cmp__(long(d1['KEY']), long(d2['KEY'])))
 			list_node[key] = meta_list
 			return self._cupack(likey, list_node)
 		else :
