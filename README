@@ -23,7 +23,7 @@ Suggested test run command:
 
 DEPENDENCIES
 
-bzr+ssh://bazaar.launchpad.net/%7Eestein/python-memcached/exceptional/
+https://code.launchpad.net/~estein/python-memcached/exceptional
 http://pypi.python.org/pypi/msgpack-python/
 
 AUTHOR
